@@ -10,7 +10,7 @@
 ```
 RT-Thread online packages
     miscellaneous packages --->
-        [*] SignalLed: Signal Led for RT-Thread
+        [*] signal_led: a signal_led package for rt-thread
 ```
 # 3、使用方式
 
