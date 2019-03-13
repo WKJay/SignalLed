@@ -14,6 +14,6 @@ inc = inc + [cwd]
 src = src + ['./signal_led.c']
 
 # add group to IDE project
-group = DefineGroup('SignalLed', src, depend = ['PKG_USING_SIGNALLED'], CPPPATH = inc)
+group = DefineGroup('SignalLed', src, depend = ['PKG_USING_SIGNAL_LED'], CPPPATH = inc)
 
 Return('group')
