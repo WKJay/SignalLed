@@ -18,7 +18,7 @@ RT-Thread online packages
 
 1. 首先申请一个信号灯结构
 
-```
+```C
 led led_0;
 ```
 
