@@ -9,8 +9,8 @@
 使用SignalLed软件包需要在RT-Thread的包管理中选中它，具体路径如下：
 ```
 RT-Thread online packages
-    miscellaneous packages --->
-        [*] signal_led: a signal_led package for rt-thread
+    peripheral libraries and drivers  --->
+        [*] SignalLed:a signal led package for rt-thread
 ```
 # 3、使用方式
 
