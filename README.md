@@ -7,18 +7,23 @@
 # 2、获取方式
 
 使用SignalLed软件包需要在RT-Thread的包管理中选中它，具体路径如下：
+
 ```
 RT-Thread online packages
     peripheral libraries and drivers  --->
         [*] SignalLed:a signal led package for rt-thread
 ```
+
 # 3、使用方式
 
 1. 首先申请一个信号灯结构
+
 ```
 led led_0;
 ```
+
 2. 定义信号灯的开关函数
+
 ```
 void rSwitch_on(void)
 {
@@ -30,25 +35,35 @@ void rSwitch_off(void)
     rt_pin_write(LEDR_PIN, PIN_HIGH);
 }
 ```
+
 3. 设置闪烁模式（字符串形式，以亮、灭、亮、灭……的顺序，依次写入持续时间，单位：ms）
+
 ```
 char* rLedMode="300,300,300,300,300,2000,";//必须以英文逗号结尾
 ```
+
 注意：时间参数必须以英文逗号间隔开，并且整个字符串必须以英文逗号结尾！
  
 4. 初始化信号灯并绑定信号灯开关函数
+
 ```
 led_init(&led_0,LEDR_PIN,rSwitch_on,rSwitch_off);
 ```
+
 5. 设置信号灯工作模式（循环多少次、闪烁方式）
+
 ```
 led_set_mode(&led_0,5,rLedMode);
 ```
+
 6. 开启信号灯
+
 ```
 led_start(&led_0);
 ```
+
 7. 创建一个信号灯线程循环调用信号灯心跳函数
+
 ```
 while (1)
 {
@@ -56,6 +71,7 @@ while (1)
     rt_thread_mdelay(LED_TICK_TIME);
 }
 ```
+
 注意：LED_TICK_TIME 为 signal_led.h 中的宏，默认值为50，单位为ms。信号灯内核依赖该宏，不可删除，该宏作为信号灯闪烁计时的时基，因此信号灯处于亮或灭状态的时间一定大于该宏所定义的时间，即若该宏定义为50，则信号灯最快50毫秒变化一次状态，用户可根据自己工程的需求改变该值得大小。
 # 4、使用案例
 
@@ -92,6 +108,7 @@ int main(void)
 }
 
 ```
+
 # 5、联系方式&感谢
 
 
