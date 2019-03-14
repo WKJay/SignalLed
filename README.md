@@ -16,55 +16,63 @@ RT-Thread online packages
 
 # 3、使用方式
 
-1. 首先申请一个信号灯结构
+1. 首先定义信号灯引脚
+
+```C
+#define LED0_PIN GET_PIN(E, 7)
+```
+
+2. 声明一个信号灯对象
 
 ```C
 led led_0;
 ```
 
-2. 定义信号灯的开关函数
+3. 定义信号灯的开关函数
 
 ```C
-void rSwitch_on(void)
+//定义开灯函数
+void led0_switch_on(void)
 {
-    rt_pin_write(LEDR_PIN, PIN_LOW);
+    rt_pin_write(LED0_PIN, PIN_LOW);
 }
-
-void rSwitch_off(void)
+//定义关灯函数
+void led0_switch_off(void)
 {
-    rt_pin_write(LEDR_PIN, PIN_HIGH);
+    rt_pin_write(LED0_PIN, PIN_HIGH);
 }
 ```
 
-3. 设置闪烁模式（字符串形式，以亮、灭、亮、灭……的顺序，依次写入持续时间，单位：ms）
+4. 设置闪烁模式（字符串形式，以亮、灭、亮、灭……的顺序，依次写入持续时间，单位：ms）
 
 ```C
-char* rLedMode="300,300,300,300,300,2000,";//必须以英文逗号结尾
+char *led0BlinkMode = "200,200,200,200,200,1000,";
 ```
 
 注意：时间参数必须以英文逗号间隔开，并且整个字符串必须以英文逗号结尾！
  
-4. 初始化信号灯并绑定信号灯开关函数
+5. 初始化信号灯并绑定信号灯开关函数
 
 ```C
-led_init(&led_0,LEDR_PIN,rSwitch_on,rSwitch_off);
+led_init(&led0, LED0_PIN, led0_switch_on, led0_switch_off);
 ```
 
-5. 设置信号灯工作模式（循环多少次、闪烁方式）
+6. 设置信号灯工作模式（循环10次，闪烁方式为 `led0BlinkMode` 中的设定）
 
 ```C
-led_set_mode(&led_0,5,rLedMode);
+led_set_mode(&led0, 10, led0BlinkMode);
 ```
 
-6. 开启信号灯
+7. 开启信号灯
 
 ```C
-led_start(&led_0);
+led_start(&led0);
 ```
 
-7. 创建一个信号灯线程循环调用信号灯心跳函数
+8. 创建一个信号灯线程循环调用信号灯心跳函数
 
 ```C
+//每隔 LED_TICK_TIME（50） 毫秒循环调用心跳函数
 while (1)
 {
     led_ticks();
@@ -76,36 +84,55 @@ while (1)
 # 4、使用案例
 
 ```C
+#include <rtthread.h>
+#include <rtdevice.h>
+#include <board.h>
 #include "drv_gpio.h"
 #include "signal_led.h"
 
-#define LEDR_PIN    GET_PIN(E, 7)
-led led_0;
+//定义信号灯引脚
+#define LED0_PIN GET_PIN(E, 7)
 
-void rSwitch_on(void)
+//定义信号灯对象
+led led0;
+
+/*  设置信号灯一个周期内的闪烁模式
+ *  格式为 “亮、灭、亮、灭、亮、灭 …………” 长度不限
+ *  注意：  该配置单位为毫秒，且必须大于 “LED_TICK_TIME” 宏，且为整数倍（不为整数倍则向下取整处理）
+ *          必须以英文逗号为间隔，且以英文逗号结尾，字符串内只允许有数字及逗号，不得有其他字符出现
+ */
+char *led0BlinkMode = "200,200,200,200,200,1000,";
+
+//定义开灯函数
+void led0_switch_on(void)
 {
-    rt_pin_write(LEDR_PIN, PIN_LOW);
+    rt_pin_write(LED0_PIN, PIN_LOW);
 }
-
-void rSwitch_off(void)
+//定义关灯函数
+void led0_switch_off(void)
 {
-    rt_pin_write(LEDR_PIN, PIN_HIGH);
+    rt_pin_write(LED0_PIN, PIN_HIGH);
 }
-
-char* rLedMode="300,300,300,300,300,2000,";//必须以英文逗号结尾
 
 int main(void)
-{
-    led_init(&led_0,LEDR_PIN,rSwitch_on,rSwitch_off);
-    led_set_mode(&led_0,5,rLedMode);
-    led_start(&led_0);
-
+{   
+    //初始化信号灯对象
+    led_init(&led0, LED0_PIN, led0_switch_on, led0_switch_off);
+    //设置信号灯工作模式，循环十次
+    led_set_mode(&led0, 10, led0BlinkMode);
+    //开启信号灯
+    led_start(&led0);
+    
+    //每隔 LED_TICK_TIME（50） 毫秒循环调用心跳函数
     while (1)
     {
         led_ticks();
         rt_thread_mdelay(LED_TICK_TIME);
     }
+
+    return RT_EOK;
 }
+
 
 ```
 

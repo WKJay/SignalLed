@@ -1,20 +1,21 @@
 #ifndef __LED_H_
 #define __LED_H_
 
-#include "stdint.h"
 #include "string.h"
-#include "rtthread.h"
+#include "stdlib.h"
+#include "math.h"
+#include "drv_gpio.h"
 
-#define LED_TICK_TIME 50        //led_handle调用的时间间隔（单位:ms）
-#define LOOP_PERMANENT 0XFF
+#define LED_TICK_TIME 50        //心跳函数调用的时间间隔（单位:ms）
+#define LOOP_PERMANENT 0XFF     //永久循环
 
 #define HANDLE_EXIST 1
 
-#define LED_OFF     0
-#define LED_ON      1
+#define LED_OFF     0           //灯灭状态
+#define LED_ON      1           //灯亮状态
 
 
-typedef struct led {
+typedef struct led{
     uint16_t    tickCnt;
     uint16_t    blinkPoint;     //闪烁节点
     uint8_t     activeState;    //信号灯亮时的引脚状态 (PIN_HIGH/PIN_LOW)
@@ -31,9 +32,12 @@ typedef struct led {
     struct led* next;
 }led;
 
+
+void led_ticks (void);
 void led_init(led *handle, rt_base_t pin_index, void (*switch_on)(void), void (*switch_off)(void));
 void led_set_mode(led* handle,uint8_t loop,char* blinkMode);
-void led_ticks (void);
 uint8_t led_start(led* led_handle);
 void led_stop(struct led *led_handle);
+
+
 #endif

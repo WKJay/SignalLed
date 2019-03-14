@@ -1,16 +1,25 @@
+/*
+ * @File:   signal_led.c
+ * @Author: WKJay
+ * @Data:   2019/03/14 20:54
+ * 
+ * @e-mail: 1931048074@qq.com
+ * 
+ */
+
 #include "signal_led.h"
-#include "stdlib.h"
-#include "math.h"
-#include "drv_gpio.h"
+
 
 static led *first_handle = NULL;
 static void led_get_blinkArr(led *handle);
 
-//初始化信号灯对象
-//handle:信号灯句柄
-//pin_index:信号灯引脚号
-//switch_on():开灯函数
-//switch_off():关灯函数
+
+/*@brief   初始化信号灯对象
+ *@param   handle:     信号灯句柄
+ *@param   pin_index:  信号灯引脚号
+ *@param   switch_on:  开灯函数（用户自定义）
+ *@param   switch_off: 关灯函数（用户自定义）
+ */
 void led_init(led *handle, rt_base_t pin_index, void (*switch_on)(void), void (*switch_off)(void))
 {
     rt_pin_mode(pin_index, PIN_MODE_OUTPUT);
@@ -20,9 +29,11 @@ void led_init(led *handle, rt_base_t pin_index, void (*switch_on)(void), void (*
     handle->switch_off = switch_off;
 }
 
-//设置信号灯的工作模式
-//loop:         循环次数 (0xff 永久循环)
-//blinkMode:    闪烁方式
+/*@brief    设置信号灯的工作模式
+ *@param    loop:         循环次数 (0xff 永久循环)
+ *@param    blinkMode:    一个周期的闪烁方式(字符串形式,如："200,200,200,2000,"表示亮200ms,灭200ms,亮200ms,灭2000ms)
+ *@note     blinkMode字符串必须以英文逗号分隔，且最后以英文逗号结尾
+ */
 void led_set_mode(led *handle, uint8_t loop, char *blinkMode)
 {
     handle->loop = loop;
@@ -30,7 +41,10 @@ void led_set_mode(led *handle, uint8_t loop, char *blinkMode)
     led_get_blinkArr(handle);
 }
 
-//获得信号灯一个周期内的闪烁时间数组
+
+/*@brief    获得信号灯一个周期内闪烁时间的数组（仅内部调用，用户无需关注）
+ *@param    handle:    信号灯句柄
+ * */
 static void led_get_blinkArr(led *handle)
 {
     char *blinkModeTemp = NULL;
@@ -75,7 +89,9 @@ static void led_get_blinkArr(led *handle)
     }
 }
 
-//信号灯状态翻转
+/*@brief    信号灯状态翻转
+ *@param    handle:    信号灯句柄
+ * */
 void led_switch(led *led_handle)
 {
     if (led_handle->state)
@@ -90,7 +106,9 @@ void led_switch(led *led_handle)
     }
 }
 
-//信号灯工作函数
+/*@brief    信号灯运作函数
+ *@param    crt_handle:    当前信号灯句柄
+ * */
 void led_handle(led *crt_handle)
 {
     if (crt_handle->loopTemp)
@@ -116,6 +134,11 @@ void led_handle(led *crt_handle)
     }
 }
 
+/*@brief    信号灯开启（若没有调用次函数开启信号灯则信号灯不会工作）
+ *@param    led_handle:     要开启的信号灯句柄
+ *@return   0：             正常
+ *          HANDLE_EXIST：  句柄冲突
+ * */
 uint8_t led_start(led *led_handle)
 {
     led_handle->loopTemp = led_handle->loop; //启动时将其重置
@@ -134,6 +157,9 @@ uint8_t led_start(led *led_handle)
     return 0;
 }
 
+/*@brief    信号灯关闭（关闭信号灯后仍可调用开启函数开启）
+ *@param    led_handle:    要关闭的信号灯句柄
+ * */
 void led_stop(struct led *led_handle)
 {
     struct led **handle_pointer;
@@ -155,7 +181,12 @@ void led_stop(struct led *led_handle)
     }
 }
 
-//信号灯定时器，LED_TICK_TIME ms 调用一次
+/*@brief    信号灯心跳函数
+ *@note     必须循环调用该函数，否则信号灯将不会工作。
+ *          可以将其放入线程或定时器中，保证每隔LED_TICK_TIME毫秒调用即可
+ *          LED_TICK_TIME是在"signal_led.h"中定义的宏，信号灯的工作基于该宏
+ *          保证该宏所定义的时间为信号灯心跳函数调用的周期！
+ * */
 void led_ticks(void)
 {
     led *current_handle;
