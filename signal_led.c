@@ -22,6 +22,7 @@ static void led_get_blinkArr(led *handle);
  */
 void led_init(led *handle, rt_base_t pin_index, void (*switch_on)(void), void (*switch_off)(void))
 {
+    switch_off();
     rt_pin_mode(pin_index, PIN_MODE_OUTPUT);
     memset(handle, 0, sizeof(led));
 
@@ -38,6 +39,9 @@ void led_set_mode(led *handle, uint8_t loop, char *blinkMode)
 {
     handle->loop = loop;
     handle->blinkMode = blinkMode;
+    handle->handleCnt = 0;
+    handle->blinkPoint = 0;
+    handle->modePointer = 0;
     led_get_blinkArr(handle);
 }
 
@@ -51,16 +55,20 @@ static void led_get_blinkArr(led *handle)
     uint8_t blinkCnt = 0;
     uint8_t blinkCntNum = 0;
 
+    if (handle->blinkArr)
+    {
+        free(handle->blinkArr);
+    }
+    
     //获取数组长度
     for (blinkModeTemp = handle->blinkMode; *blinkModeTemp != '\0'; blinkModeTemp++)
     {
         if (*blinkModeTemp == ',')
         {
-            if (*(blinkModeTemp + 1) != '\0')
-                handle->modeCnt++;
+            handle->modeCnt++;
         }
     }
-    if (handle->modeCnt)
+    if (*(blinkModeTemp-1) != ',')
         handle->modeCnt++;
 
     //创建数组
@@ -69,22 +77,18 @@ static void led_get_blinkArr(led *handle)
     //存储数据
     for (blinkModeTemp = handle->blinkMode; *blinkModeTemp != '\0'; blinkModeTemp++)
     {
-        if (*blinkModeTemp == ',')
+        handle->blinkArr[blinkCntNum] = atol(blinkModeTemp);
+        //计算出计数变量的值（根据信号灯定时器定时时间）
+        handle->blinkArr[blinkCntNum] /= LED_TICK_TIME;
+        blinkCntNum++;
+        while(*blinkModeTemp != ',')
         {
-            for (; blinkCnt > 1; blinkCnt--)
+            if(*blinkModeTemp == '\0')
             {
-                handle->blinkArr[blinkCntNum] +=
-                    (*(blinkModeTemp - blinkCnt) - '0') * pow(10, blinkCnt - 1);
+                blinkModeTemp--;
+                break;
             }
-
-            //计算出计数变量的值（根据信号灯定时器定时时间）
-            handle->blinkArr[blinkCntNum] /= LED_TICK_TIME;
-
-            blinkCntNum++;
-        }
-        else
-        {
-            blinkCnt++;
+            blinkModeTemp++;
         }
     }
 }
@@ -94,7 +98,7 @@ static void led_get_blinkArr(led *handle)
  * */
 void led_switch(led *led_handle)
 {
-    if (led_handle->state)
+    if (led_handle->modePointer%2)
     {
         led_handle->switch_off();
         led_handle->state = LED_OFF;
@@ -114,12 +118,18 @@ void led_handle(led *crt_handle)
     if (crt_handle->loopTemp)
     {
         crt_handle->handleCnt++;
+__repeat:
         if ((crt_handle->handleCnt - 1) == crt_handle->blinkPoint)
         {
             if (crt_handle->modePointer < crt_handle->modeCnt)
             {
-                led_switch(crt_handle);
                 crt_handle->blinkPoint += crt_handle->blinkArr[crt_handle->modePointer];
+                if(crt_handle->blinkPoint == 0)	//时间为0的直接跳过
+                {
+                    crt_handle->modePointer++;
+                    goto __repeat;
+                }
+                else led_switch(crt_handle);
                 crt_handle->modePointer++;
             }
             else
@@ -132,6 +142,8 @@ void led_handle(led *crt_handle)
             }
         }
     }
+    else
+        led_stop(crt_handle);
 }
 
 /*@brief    信号灯开启（若没有调用次函数开启信号灯则信号灯不会工作）
