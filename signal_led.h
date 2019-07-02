@@ -17,7 +17,7 @@
 
 typedef struct led{
     uint16_t    tickCnt;
-    uint16_t    blinkPoint;     //闪烁节点
+    uint8_t     blinkPoint;     //闪烁节点
     uint8_t     activeState;    //信号灯亮时的引脚状态 (PIN_HIGH/PIN_LOW)
     uint8_t     state;          //信号灯当前的状态
     uint8_t     modePointer;    //用于指明当前参照闪烁数组中的第几个成员

@@ -12,6 +12,7 @@ inc = inc + [cwd]
 
 # add Signal Led source code
 src = src + ['./signal_led.c']
+src = src + ['./led_sample.c']
 
 # add group to IDE project
 group = DefineGroup('SignalLed', src, depend = ['PKG_USING_SIGNAL_LED'], CPPPATH = inc)
