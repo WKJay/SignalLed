@@ -19,21 +19,21 @@
 
 static rt_timer_t led_timer;
 
-//¶¨ÒåĞÅºÅµÆ¶ÔÏó
+//å®šä¹‰ä¿¡å·ç¯å¯¹è±¡
 led led0;
 led led1;
 
-/*  ÉèÖÃĞÅºÅµÆÒ»¸öÖÜÆÚÄÚµÄÉÁË¸Ä£Ê½
- *  ¸ñÊ½Îª ¡°ÁÁ¡¢Ãğ¡¢ÁÁ¡¢Ãğ¡¢ÁÁ¡¢Ãğ ¡­¡­¡­¡­¡± ³¤¶È²»ÏŞ
- *  ×¢Òâ£º  ¸ÃÅäÖÃµ¥Î»ÎªºÁÃë£¬ÇÒ±ØĞë´óÓÚ ¡°LED_TICK_TIME¡± ºê£¬ÇÒÎªÕûÊı±¶£¨²»ÎªÕûÊı±¶ÔòÏòÏÂÈ¡Õû´¦Àí£©
- *          ±ØĞëÒÔÓ¢ÎÄ¶ººÅÎª¼ä¸ô£¬ÇÒÒÔÓ¢ÎÄ¶ººÅ½áÎ²£¬×Ö·û´®ÄÚÖ»ÔÊĞíÓĞÊı×Ö¼°¶ººÅ£¬²»µÃÓĞÆäËû×Ö·û³öÏÖ
+/*  è®¾ç½®ä¿¡å·ç¯ä¸€ä¸ªå‘¨æœŸå†…çš„é—ªçƒæ¨¡å¼
+ *  æ ¼å¼ä¸º â€œäº®ã€ç­ã€äº®ã€ç­ã€äº®ã€ç­ â€¦â€¦â€¦â€¦â€ é•¿åº¦ä¸é™
+ *  æ³¨æ„ï¼š  è¯¥é…ç½®å•ä½ä¸ºæ¯«ç§’ï¼Œä¸”å¿…é¡»å¤§äº â€œLED_TICK_TIMEâ€ å®ï¼Œä¸”ä¸ºæ•´æ•°å€ï¼ˆä¸ä¸ºæ•´æ•°å€åˆ™å‘ä¸‹å–æ•´å¤„ç†ï¼‰
+ *          å¿…é¡»ä»¥è‹±æ–‡é€—å·ä¸ºé—´éš”ï¼Œä¸”ä»¥è‹±æ–‡é€—å·ç»“å°¾ï¼Œå­—ç¬¦ä¸²å†…åªå…è®¸æœ‰æ•°å­—åŠé€—å·ï¼Œä¸å¾—æœ‰å…¶ä»–å­—ç¬¦å‡ºç°
  */
 char *ledBlinkMode0 = "200,200,200,200,200,1000";
 char *ledBlinkMode1 = "0,200";
 char *ledBlinkMode2 = "500,500,500";
 char *ledBlinkMode3 = "500,500";
 
-//¶¨Òå¿ªµÆº¯Êı
+//å®šä¹‰å¼€ç¯å‡½æ•°
 void led0_switch_on(void)
 {
     rt_pin_write(LED0_PIN, PIN_LOW);
@@ -43,7 +43,7 @@ void led1_switch_on(void)
     rt_pin_write(LED1_PIN, PIN_LOW);
 }
 
-//¶¨Òå¹ØµÆº¯Êı
+//å®šä¹‰å…³ç¯å‡½æ•°
 void led0_switch_off(void)
 {
     rt_pin_write(LED0_PIN, PIN_HIGH);
@@ -61,19 +61,19 @@ static void led_timeout(void *parameter)
 
 int rt_led_timer_init(void)
 {
-    //³õÊ¼»¯ĞÅºÅµÆ¶ÔÏó
+    //åˆå§‹åŒ–ä¿¡å·ç¯å¯¹è±¡
     led_init(&led0, LED0_PIN, led0_switch_on, led0_switch_off);
     led_init(&led1, LED1_PIN, led1_switch_on, led1_switch_off);
     
-    //ÉèÖÃĞÅºÅµÆ¹¤×÷Ä£Ê½£¬Ñ­»·Ê®´Î
+    //è®¾ç½®ä¿¡å·ç¯å·¥ä½œæ¨¡å¼ï¼Œå¾ªç¯åæ¬¡
     led_set_mode(&led0, LOOP_PERMANENT, ledBlinkMode0);
     led_set_mode(&led1, LOOP_PERMANENT, ledBlinkMode3);
     
-    //¿ªÆôĞÅºÅµÆ
+    //å¼€å¯ä¿¡å·ç¯
     led_start(&led0);
     led_start(&led1);
     
-    /* ´´½¨¶¨Ê±Æ÷1  ÖÜÆÚ¶¨Ê±Æ÷ */    
+    /* åˆ›å»ºå®šæ—¶å™¨1  å‘¨æœŸå®šæ—¶å™¨ */    
 #ifdef RT_USING_TIMER_SOFT
     led_timer = rt_timer_create("led_timer", led_timeout,
                                 RT_NULL, LED_TICK_TIME,
@@ -83,13 +83,13 @@ int rt_led_timer_init(void)
                                 RT_NULL, LED_TICK_TIME,
                                 RT_TIMER_FLAG_PERIODIC);
 #endif	
-    /* Æô¶¯¶¨Ê±Æ÷1 */
+    /* å¯åŠ¨å®šæ—¶å™¨1 */
     if (led_timer != RT_NULL)
         rt_timer_start(led_timer);
     
 //    /* start software timer thread */    
 //    rt_thread_t tid = RT_NULL;
-//    /* ´´½¨Ïß³Ì1 */
+//    /* åˆ›å»ºçº¿ç¨‹1 */
 //    tid = rt_thread_create("led_thread",
 //                            rt_thread_led_entry, 
 //                            RT_NULL,
