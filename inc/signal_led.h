@@ -16,17 +16,17 @@
 
 
 typedef struct led{
-    uint16_t    tickCnt;
-    uint8_t     blinkPoint;     //闪烁节点
     uint8_t     activeState;    //信号灯亮时的引脚状态 (PIN_HIGH/PIN_LOW)
     uint8_t     state;          //信号灯当前的状态
     uint8_t     modePointer;    //用于指明当前参照闪烁数组中的第几个成员
-    uint8_t     modeCnt;        //一个周期内的闪烁次数
-    uint8_t     handleCnt;      //handle函数计数
-    uint8_t     loop;           //周期
-    uint8_t     loopTemp;       //存储周期的临时变量，当重启led时会被重置
-    char*       blinkMode;      //亮、灭、亮、灭、亮、灭………………（注意时间之间以“,”隔开，最后必须以“,”结尾）
-    uint16_t*   blinkArr;
+    uint16_t    tickCnt;
+    uint16_t    modeCnt;        //一个周期内的闪烁次数
+    uint16_t    handleCnt;      //handle函数计数
+    uint16_t    loop;           //周期
+    uint16_t    loopTemp;       //存储周期的临时变量，当重启led时会被重置
+    uint32_t    blinkPoint;     //闪烁节点
+    uint32_t*   blinkArr;
+    char*       blinkMode;      //亮、灭、亮、灭、亮、灭………………（注意时间之间以“,”隔开，最后必须以“,”结尾）  
     void        (*switch_on)(void);
     void        (*switch_off)(void);
     struct led* next;

@@ -125,7 +125,7 @@ void led_set_mode(led* handle,uint8_t loop,char* blinkMode);
 ###### loop 接受的参数
 |loop值|描述|
 |----|----|
-|0-255|循环0-225次|
+|0-65535|循环0-65535次|
 |LOOP_PERMANENT|永久循环|
 
 ###### blinkMode
@@ -149,7 +149,7 @@ void led_ticks (void);
 
 使用该软件包定义的所有信号灯对象都由上述心跳函数统一管理，无需用户关注。用户需要将该函数部署在一个按固定时基触发的定时器内，在 `signal_led.h` 文件中定义有心跳时基宏 `LED_TICK_TIME`，单位为毫秒，用户可以直接使用该宏配置定时器的时基，也可自行写入定时器时基并修改该宏。但需要注意的时，必须保持该宏和调用心跳函数的时基保持相等，否则信号灯将无法正常工作！
 
-同时，心跳函数的时基决定了信号灯的最快闪烁频率，若时基为50ms，则信号灯闪烁频率最高为 1000ms/50ms = 20Hz，且信号灯在一个状态保持的时间也必须为时基的整数倍，时基为50ms，则可以设置的保持时间为 50ms、100ms、150ms…………不是整数倍的内核自动向下取整。
+同时，心跳函数的时基决定了信号灯的最快闪烁频率，若时基为50ms，则信号灯闪烁频率最高为 1000ms/50ms = 20Hz，且信号灯在一个状态保持的时间也必须为时基的整数倍，时基为50ms，则可以设置的保持时间为 50ms、100ms、150ms…………不是整数倍的内核自动向上取整。
 
 最后需注意，信号灯主心跳函数必须部署，否则信号灯将无法工作。
 
@@ -182,58 +182,131 @@ void led_stop(struct led *led_handle);
 
 关闭信号灯后信号灯配置不会消失，用户仍可调用开启函数重启信号灯。
 
+### 信号灯常亮、常灭
+
+若想实现信号灯的常亮/常灭，可以如下设置模式：
+
+```C
+
+/*常灭*/
+char *alwaysOn = "0,100,";   //100可以为任意整数（小于long型最大值），保证亮的时间为0即可
+led_set_mode(&led0, LOOP_PERMANENT, alwaysOn);
+
+/*常亮*/
+char *alwaysOff = "100,0,";   //100可以为任意整数（小于long型最大值），保证灭的时间为0即可
+led_set_mode(&led0, LOOP_PERMANENT, alwaysOff);
+
+```
+
+当然，你仍然可以使用以下接口直接进行信号灯的开启/关闭。需要注意的是若想使用以下接口，则需要保证操作时信号灯当前不工作在其他模式内。
+
+```C
+
+/*其中 led 为你所定义的信号灯对象*/
+led.switch_on();//开灯
+led.switch_off();//关灯
+
+```
 
 # 5、使用案例
 
 ```C
+
 #include <rtthread.h>
 #include <rtdevice.h>
-#include <board.h>
-#include "drv_gpio.h"
 #include "signal_led.h"
 
-//定义信号灯引脚
-#define LED0_PIN GET_PIN(E, 7)
+/* defined the LED pin */
+#define LED0_PIN    GET_PIN(A, 8)
+
+
+static rt_timer_t led_timer;
 
 //定义信号灯对象
 led led0;
+
 
 /*  设置信号灯一个周期内的闪烁模式
  *  格式为 “亮、灭、亮、灭、亮、灭 …………” 长度不限
  *  注意：  该配置单位为毫秒，且必须大于 “LED_TICK_TIME” 宏，且为整数倍（不为整数倍则向下取整处理）
  *          必须以英文逗号为间隔，且以英文逗号结尾，字符串内只允许有数字及逗号，不得有其他字符出现
  */
-char *led0BlinkMode = "200,200,200,200,200,1000,";
+char *ledBlinkMode0 = "500,500,"; //1Hz闪烁
+char *ledBlinkMode1 = "50,50,";   //10Hz闪烁
+char *ledBlinkMode2 = "0,100,";   //常灭
+char *ledBlinkMode3 = "100,0,";   //常亮
 
 //定义开灯函数
 void led0_switch_on(void)
 {
-    rt_pin_write(LED0_PIN, PIN_LOW);
-}
-//定义关灯函数
-void led0_switch_off(void)
-{
     rt_pin_write(LED0_PIN, PIN_HIGH);
 }
 
-int main(void)
-{   
+
+//定义关灯函数
+void led0_switch_off(void)
+{
+    rt_pin_write(LED0_PIN, PIN_LOW);
+}
+
+//中途切换模式测试
+void led_switch (void *param)
+{
+    while(1)
+    {
+        rt_thread_mdelay(5000);
+        led_set_mode(&led0, LOOP_PERMANENT, ledBlinkMode2);
+        rt_thread_mdelay(5000);
+        led_set_mode(&led0, LOOP_PERMANENT, ledBlinkMode0);
+    }
+    
+}
+
+static void led_timeout(void *parameter)
+{
+    led_ticks();
+}
+
+int rt_led_timer_init(void)
+{
     //初始化信号灯对象
     led_init(&led0, LED0_PIN, led0_switch_on, led0_switch_off);
+  
     //设置信号灯工作模式，循环十次
-    led_set_mode(&led0, 10, led0BlinkMode);
+    led_set_mode(&led0, LOOP_PERMANENT, ledBlinkMode0);
+    
     //开启信号灯
     led_start(&led0);
     
-    //每隔 LED_TICK_TIME（50） 毫秒循环调用心跳函数
-    while (1)
-    {
-        led_ticks();
-        rt_thread_mdelay(LED_TICK_TIME);
-    }
-
+    /* 创建定时器1  周期定时器 */    
+#ifdef RT_USING_TIMER_SOFT
+    led_timer = rt_timer_create("led_timer", led_timeout,
+                                RT_NULL, LED_TICK_TIME,
+                                RT_TIMER_FLAG_PERIODIC|RT_TIMER_FLAG_SOFT_TIMER);
+#else
+    led_timer = rt_timer_create("led_timer", led_timeout,
+                                RT_NULL, LED_TICK_TIME,
+                                RT_TIMER_FLAG_PERIODIC);
+#endif	
+    /* 启动定时器1 */
+    if (led_timer != RT_NULL)
+        rt_timer_start(led_timer);
+    
+    /* start software timer thread */    
+    rt_thread_t tid = RT_NULL;
+    /* 创建线程1 */
+    tid = rt_thread_create("led_switch_test",
+                            led_switch, 
+                            RT_NULL,
+                            512,
+                            RT_THREAD_PRIORITY_MAX/2,
+                            100);
+    if (tid != RT_NULL)
+        rt_thread_startup(tid);
     return RT_EOK;
 }
+INIT_APP_EXPORT(rt_led_timer_init);
+
 
 
 ```

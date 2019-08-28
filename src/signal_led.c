@@ -42,6 +42,7 @@ void led_set_mode(led *handle, uint8_t loop, char *blinkMode)
     handle->handleCnt = 0;
     handle->blinkPoint = 0;
     handle->modePointer = 0;
+    handle->modeCnt = 0;
     led_get_blinkArr(handle);
 }
 
@@ -52,7 +53,6 @@ void led_set_mode(led *handle, uint8_t loop, char *blinkMode)
 static void led_get_blinkArr(led *handle)
 {
     char *blinkModeTemp = NULL;
-    uint8_t blinkCnt = 0;
     uint8_t blinkCntNum = 0;
 
     if (handle->blinkArr)
@@ -79,7 +79,15 @@ static void led_get_blinkArr(led *handle)
     {
         handle->blinkArr[blinkCntNum] = atol(blinkModeTemp);
         //计算出计数变量的值（根据信号灯定时器定时时间）
-        handle->blinkArr[blinkCntNum] /= LED_TICK_TIME;
+        
+        if((handle->blinkArr[blinkCntNum] % LED_TICK_TIME))
+        {
+            handle->blinkArr[blinkCntNum] = handle->blinkArr[blinkCntNum]/LED_TICK_TIME + 1;
+        }
+        else
+        {
+            handle->blinkArr[blinkCntNum]/=LED_TICK_TIME;
+        }
         blinkCntNum++;
         while(*blinkModeTemp != ',')
         {
@@ -141,7 +149,7 @@ __repeat:
             if (crt_handle->modePointer < crt_handle->modeCnt)
             {
                 crt_handle->blinkPoint += crt_handle->blinkArr[crt_handle->modePointer];
-                if(crt_handle->blinkPoint == 0)	//时间为0的直接跳过
+                if(crt_handle->blinkArr[crt_handle->modePointer] == 0)	//时间为0的直接跳过
                 {
                     crt_handle->modePointer++;
                     goto __repeat;
