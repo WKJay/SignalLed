@@ -1,9 +1,19 @@
-# 信号灯LED
+# 信号灯LED V2.1
 
 # 1、介绍
 
 在我们的日常开发中，led虽小，但却起着不可忽视的作用。我们总是用小灯的闪烁来表示一个事件的发生或停止。单个小灯的闪烁直接调用设置高低电平的函数会非常方便，然而，当你有多个led闪烁事件的时候，一个个的循环，一个个的delay可能就让你非常烦躁了。<br>
 这个时候，快来试试这款简单的小工具吧，抛开所有的循环和延时，解放你的双手，只需几个设置，便可轻松实现各种不同的信号闪烁！
+
+### 特性
+
+- 支持字符串设置信号灯闪烁模式，简单易懂，操作方便。
+- 支持非固定频率闪烁，闪烁方式可任意设置。
+- 支持指定次数循环闪烁模式、无限循环闪烁模式、常亮模式、常灭模式。
+- 支持中途修改闪烁模式，最少仅需一条语句即可改变模式。
+- 支持设置信号灯循环结束的回调函数。
+- 支持自定义软件包内存操作函数，告别内存碎片。
+
 # 2、获取方式
 
 使用SignalLed软件包需要在RT-Thread的包管理中选中它，具体路径如下：
@@ -16,16 +26,16 @@ RT-Thread online packages
 
 # 3、使用方式
 
-1. 首先定义信号灯引脚
+1. 首先根据自己的硬件平台初始化信号灯硬件引脚
 
 ```C
-#define LED0_PIN GET_PIN(E, 7)
+ rt_pin_mode(GET_PIN(A,8),PIN_MODE_OUTPUT);
 ```
 
-2. 声明一个信号灯对象
+2. 声明一个信号灯对象句柄
 
 ```C
-led led_0;
+led_t *led0 =  NULL;
 ```
 
 3. 定义信号灯的开关函数
@@ -51,10 +61,10 @@ char *led0BlinkMode = "200,200,200,200,200,1000,";
 
 注意：时间参数必须以英文逗号间隔开，并且整个字符串必须以英文逗号结尾！
  
-5. 初始化信号灯并绑定信号灯开关函数
+5. 动态创建一个信号灯对象，并给对应的句柄赋值
 
 ```C
-led_init(&led0, LED0_PIN, led0_switch_on, led0_switch_off);
+led0 = led_create(led0_switch_on, led0_switch_off);
 ```
 
 6. 设置信号灯工作模式（循环10次，闪烁方式为 `led0BlinkMode` 中的设定）
@@ -63,13 +73,19 @@ led_init(&led0, LED0_PIN, led0_switch_on, led0_switch_off);
 led_set_mode(&led0, 10, led0BlinkMode);
 ```
 
-7. 开启信号灯
+7. 设置信号灯循环结束后的回调函数（若不需要回调则可以不设置）
+
+```C
+led_set_blink_over_callback(led0,blink_over_callback);
+```
+
+8. 开启信号灯
 
 ```C
 led_start(&led0);
 ```
 
-8. 创建一个信号灯线程循环调用信号灯心跳函数
+9. 创建一个信号灯线程循环调用信号灯心跳函数
 
 ```C
 //每隔 LED_TICK_TIME（50） 毫秒循环调用心跳函数
@@ -85,19 +101,17 @@ while (1)
 # 4、API简介
 本软件包给用户提供的API接口有：
 
-###	初始化信号灯对象
+###	创建信号灯对象
 ```C
-void led_init(led *handle, rt_base_t pin_index, void (*switch_on)(void), void (*switch_off)(void));
+led_t *led_create(void (*switch_on)(void), void (*switch_off)(void))
 ```
 
 |参数|描述|
 |----|----|
-|handle|信号灯句柄|
-|pin_index|信号灯引脚号|
 |switch_on|开灯函数（用户自定义）|
 |switch_off|关灯函数（用户自定义）|
 
-该函数用于初始化一个信号灯对象，其中的引脚号为RT-Thread 提供的引脚编号。有2种方式可以获取引脚编号：使用宏定义或者查看PIN 驱动文件。具体获取方法请参照[RT-Thread文档中心->设备和驱动->PIN设备->访问PIN设备->获取引脚编号](https://www.rt-thread.org/document/site/programming-manual/device/pin/pin/)
+该函数用于动态创建一个信号灯对象，若创建成功则返回一个信号灯对象句柄，若失败则返回NULL。
 
 开关灯函数由用户自定义，格式参照如下：
 
@@ -111,7 +125,7 @@ void switch_on (void) //待传入的函数
 ### 设置信号灯工作模式
 
 ```C
-void led_set_mode(led* handle,uint8_t loop,char* blinkMode);
+void led_set_mode(led_t* handle,uint8_t loop,char* blinkMode);
 ```
 
 |参数|描述|
@@ -153,13 +167,40 @@ void led_ticks (void);
 
 最后需注意，信号灯主心跳函数必须部署，否则信号灯将无法工作。
 
+### 设置信号灯循环结束回调函数
+
+对于有限循环次数的信号灯，用户可以通过设置其循环结束回调函数来进行信号灯循环结束事件的捕获。
+
+```C
+void led_set_blink_over_callback(led_t *led_handle, led_blink_over_callback callback);
+```
+
+|参数|描述|
+|----|----|
+|led_handle|信号灯句柄|
+|led_blink_over_callback|用户定义的回调函数|
+
+当信号灯循环工作结束后，若用户设置了回调函数，内核会自动调用该回调函数。其中回调函数的格式如下：
+
+```C
+void (*led_blink_over_callback)(led_t *led_handler);
+```
+
+|参数|描述|
+|----|----|
+|led_handle|结束循环的信号灯句柄|
+
+内核在调用该函数的同时会把结束循环的信号灯句柄传入该函数的参数，用户可以通过该参数识别与操作结束循环的信号灯。
+
+**需要注意的是，若用户想要在回调函数中改变信号灯的工作模式，必须得保证信号灯心跳 `led_ticks()` 部署在非中断程序中，因为该操作会进行动态内存的分配，若在中断中进行任何动态内存操作，会出现不可预料的错误。**
+
 
 ### 开启信号灯
 
 当对信号灯的设置都完成之后，我们就可以通过下面的函数开启信号灯：
 
 ```C
-uint8_t led_start(led* led_handle);
+uint8_t led_start(led_t* led_handle);
 ```
 
 |参数|描述|
@@ -173,7 +214,7 @@ uint8_t led_start(led* led_handle);
 信号灯开启后，用户可根据自己的需求关闭信号灯：
 
 ```C
-void led_stop(struct led *led_handle);
+void led_stop(led_t *led_handle);
 ```
 
 |参数|描述|
@@ -208,6 +249,32 @@ led.switch_off();//关灯
 
 ```
 
+### 自定义动态内存管理
+
+该软件包内核多次使用了动态内存分配和释放，原始的 `malloc` 与 `free` 会带来不可避免的内存碎片。若用户对于内存管理的要求比较高，可以自定义动态内存管理的接口。若对于内存管理要求不高，则可以不进行自定义。
+
+```C
+int led_set_mem_operation(led_mem_opreation_t *operation)
+```
+|参数|描述|
+|----|----|
+|operation|内存接口结构体指针|
+
+其中内存接口结构体的定义如下：
+
+```C
+typedef struct led_mem_operation
+{
+    void *(*malloc_fn)(size_t sz);
+    void (*free_fn)(void *ptr);
+} led_mem_opreation_t;
+```
+
+在自定义动态内存管理接口时，必须将内存接口结构体内的两个接口全部实现才能配置成功，否则自定义将不生效，并自动使用原始的内存管理函数。
+
+**需要注意的是，若使用自定义动态内存管理，必须在调用任何该软件包内接口之前进行操作，因为在调用软件包接口时内核会自动进行内存分配，若提前调用信号灯操作函数（尤其是信号灯创建、模式设置），会导致原始内存分配和自定义内存分配同时存在，将出现不可预料的错误！具体调用时机可参考下文案例**
+
+
 # 5、使用案例
 
 ```C
@@ -219,23 +286,22 @@ led.switch_off();//关灯
 /* defined the LED pin */
 #define LED0_PIN    GET_PIN(A, 8)
 
-
-static rt_timer_t led_timer;
-
-//定义信号灯对象
-led led0;
-
+//定义信号灯对象句柄
+led_t *led0 =  NULL;
+//定义内存操作函数接口
+led_mem_opreation_t led_mem_opreation;
 
 /*  设置信号灯一个周期内的闪烁模式
  *  格式为 “亮、灭、亮、灭、亮、灭 …………” 长度不限
  *  注意：  该配置单位为毫秒，且必须大于 “LED_TICK_TIME” 宏，且为整数倍（不为整数倍则向下取整处理）
  *          必须以英文逗号为间隔，且以英文逗号结尾，字符串内只允许有数字及逗号，不得有其他字符出现
  */
-char *ledBlinkMode0 = "500,500,"; //1Hz闪烁
-char *ledBlinkMode1 = "50,50,";   //10Hz闪烁
-char *ledBlinkMode2 = "0,100,";   //常灭
-char *ledBlinkMode3 = "100,0,";   //常亮
-
+char *led_blink_mode_0 = "500,500,"; //1Hz闪烁
+char *led_blink_mode_1 = "50,50,";   //10Hz闪烁
+char *led_blink_mode_2 = "0,100,";   //常灭
+char *led_blink_mode_3 = "100,100,";   //常亮
+char *led_blink_mode_4 = "100,100,100,1000,";//非固定时间
+char *led_blink_mode_5 = "500,100,";
 //定义开灯函数
 void led0_switch_on(void)
 {
@@ -252,48 +318,62 @@ void led0_switch_off(void)
 //中途切换模式测试
 void led_switch (void *param)
 {
-    while(1)
-    {
-        rt_thread_mdelay(5000);
-        led_set_mode(&led0, LOOP_PERMANENT, ledBlinkMode2);
-        rt_thread_mdelay(5000);
-        led_set_mode(&led0, LOOP_PERMANENT, ledBlinkMode0);
-    }
-    
+    rt_thread_mdelay(5000);
+    led_set_mode(led0, LOOP_PERMANENT, led_blink_mode_1);   
+    rt_thread_mdelay(5000);
+    led_set_mode(led0, 10, led_blink_mode_5);  
 }
 
-static void led_timeout(void *parameter)
+void blink_over_callback(led_t *led_handler)
 {
-    led_ticks();
+    led_set_mode(led_handler, LOOP_PERMANENT, led_blink_mode_4);
+    led_start(led_handler);
 }
+
+static void led_run(void *parameter)
+{
+    while(1)
+    {
+        led_ticks();
+        rt_thread_mdelay(LED_TICK_TIME);
+    }
+}
+
 
 int rt_led_timer_init(void)
 {
+    rt_pin_mode(GET_PIN(A,8),PIN_MODE_OUTPUT);
+    
+/*自定义内存操作接口
+ *注意：若要进行自定义内存操作，必须要在调用任何软件包内接口之前作设置，
+ *      否则会出现不可意料的错误！！！
+ */
+    led_mem_opreation.malloc_fn = (void* (*)(size_t))rt_malloc;
+    led_mem_opreation.free_fn = rt_free;
+    led_set_mem_operation(&led_mem_opreation);
+    
     //初始化信号灯对象
-    led_init(&led0, LED0_PIN, led0_switch_on, led0_switch_off);
+    led0 = led_create(led0_switch_on, led0_switch_off);
   
     //设置信号灯工作模式，循环十次
-    led_set_mode(&led0, LOOP_PERMANENT, ledBlinkMode0);
+    led_set_mode(led0, LOOP_PERMANENT, led_blink_mode_0);
+    //设置信号灯闪烁结束回调函数
+    led_set_blink_over_callback(led0,blink_over_callback);
     
     //开启信号灯
-    led_start(&led0);
+    led_start(led0);
     
-    /* 创建定时器1  周期定时器 */    
-#ifdef RT_USING_TIMER_SOFT
-    led_timer = rt_timer_create("led_timer", led_timeout,
-                                RT_NULL, LED_TICK_TIME,
-                                RT_TIMER_FLAG_PERIODIC|RT_TIMER_FLAG_SOFT_TIMER);
-#else
-    led_timer = rt_timer_create("led_timer", led_timeout,
-                                RT_NULL, LED_TICK_TIME,
-                                RT_TIMER_FLAG_PERIODIC);
-#endif	
-    /* 启动定时器1 */
-    if (led_timer != RT_NULL)
-        rt_timer_start(led_timer);
-    
-    /* start software timer thread */    
+     
     rt_thread_t tid = RT_NULL;
+    tid = rt_thread_create("signal_led",
+                            led_run, 
+                            RT_NULL,
+                            512,
+                            RT_THREAD_PRIORITY_MAX/2,
+                            100);
+    if (tid != RT_NULL)
+        rt_thread_startup(tid);
+    
     /* 创建线程1 */
     tid = rt_thread_create("led_switch_test",
                             led_switch, 
@@ -306,8 +386,6 @@ int rt_led_timer_init(void)
     return RT_EOK;
 }
 INIT_APP_EXPORT(rt_led_timer_init);
-
-
 
 ```
 

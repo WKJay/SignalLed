@@ -1,44 +1,40 @@
-#ifndef __LED_H_
-#define __LED_H_
+#ifndef __SIGNAL_LED_H
+#define __SIGNAL_LED_H
 
-#include "string.h"
-#include "stdlib.h"
-#include "math.h"
 #include "drv_gpio.h"
 
-#define LED_TICK_TIME 50        //心跳函数调用的时间间隔（单位:ms）
-#define LOOP_PERMANENT 0XFF     //永久循环
+#define LED_TICK_TIME 50    //心跳函数调用的时间间隔（单位:ms）
+#define LOOP_PERMANENT 0XFF //永久循环
 
 #define HANDLE_EXIST 1
 
-#define LED_OFF     0           //灯灭状态
-#define LED_ON      1           //灯亮状态
+#define LED_OFF 0 //灯灭状态
+#define LED_ON 1  //灯亮状态
 
+//led 软件包内存操作
+typedef struct led_mem_operation
+{
+    void *(*malloc_fn)(size_t sz);
+    void (*free_fn)(void *ptr);
+} led_mem_opreation_t;
 
-typedef struct led{
-    uint8_t     activeState;    //信号灯亮时的引脚状态 (PIN_HIGH/PIN_LOW)
-    uint8_t     state;          //信号灯当前的状态
-    uint8_t     modePointer;    //用于指明当前参照闪烁数组中的第几个成员
-    uint16_t    tickCnt;
-    uint16_t    modeCnt;        //一个周期内的闪烁次数
-    uint16_t    handleCnt;      //handle函数计数
-    uint16_t    loop;           //周期
-    uint16_t    loopTemp;       //存储周期的临时变量，当重启led时会被重置
-    uint32_t    blinkPoint;     //闪烁节点
-    uint32_t*   blinkArr;
-    char*       blinkMode;      //亮、灭、亮、灭、亮、灭………………（注意时间之间以“,”隔开，最后必须以“,”结尾）  
-    void        (*switch_on)(void);
-    void        (*switch_off)(void);
-    struct led* next;
-}led;
+typedef struct _led
+{
+    void *led_internal; //led 内部处理结构体
+    void (*switch_on)(void);
+    void (*switch_off)(void);
+    struct _led *next;
+} led_t;
 
+typedef void (*led_blink_over_callback)(led_t *led_handler);
 
-void led_ticks (void);
-void led_init(led *handle, rt_base_t pin_index, void (*switch_on)(void), void (*switch_off)(void));
-void led_set_mode(led* handle,uint8_t loop,char* blinkMode);
-uint8_t led_start(led* led_handle);
-void led_stop(struct led *led_handle);
-void led_toggle (led *led_handle);
-
+void    led_ticks(void);
+led_t*  led_create(void (*switch_on)(void), void (*switch_off)(void));
+int     led_set_mem_operation(led_mem_opreation_t *operation);
+void    led_set_blink_over_callback(led_t *led_handler, led_blink_over_callback callback);
+void    led_set_mode(led_t *handle, uint8_t loop, char *blinkMode);
+uint8_t led_start(led_t *led_handle);
+void    led_stop(led_t *led_handle);
+void    led_toggle(led_t *led_handle);
 
 #endif
