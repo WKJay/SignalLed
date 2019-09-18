@@ -299,7 +299,7 @@ led_mem_opreation_t led_mem_opreation;
 char *led_blink_mode_0 = "500,500,"; //1Hz闪烁
 char *led_blink_mode_1 = "50,50,";   //10Hz闪烁
 char *led_blink_mode_2 = "0,100,";   //常灭
-char *led_blink_mode_3 = "100,100,";   //常亮
+char *led_blink_mode_3 = "100,0,";   //常亮
 char *led_blink_mode_4 = "100,100,100,1000,";//非固定时间
 char *led_blink_mode_5 = "500,100,";
 //定义开灯函数
