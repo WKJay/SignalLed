@@ -1,13 +1,11 @@
-/*************************************************
- Copyright (c) 2019
- All rights reserved.
- File name:     signal_led.c
- Description:   
- History:
- 1. Version:    
-    Date:       2019/03/14
-    Author:     WKJay
-*************************************************/
+/*
+ * Copyright (c) 2019 All rights reserved.
+ *
+ * Change Logs:
+ * Date           Author       Notes
+ * 2019-03-14     WKJay        first version
+ * 2022-01-09     kyle         add led switch callback parameter
+ */
 
 #include "signal_led.h"
 #include <string.h>
@@ -97,23 +95,24 @@ int led_set_mem_operation(led_mem_opreation_t *operation)
  *  @switch_off:   熄灭led函数
  * Output:  led句柄
  */
-led_t *led_create(void (*switch_on)(void), void (*switch_off)(void))
+led_t *led_create(void (*switch_on)(void *args), void (*switch_off)(void *args), void *args)
 {
     led_internal_t *led_internal_ptr = NULL;
     led_t *led_ptr = NULL;
 
     //创建对象前先关闭led
-    switch_off();
+    switch_off(args);
     //动态创建led对象
-    led_internal_ptr = led_malloc(sizeof(led_internal_t));
-    led_ptr = led_malloc(sizeof(led_t));
+    led_internal_ptr    = led_malloc(sizeof(led_internal_t));
+    led_ptr             = led_malloc(sizeof(led_t));
     //清空结构体
     memset(led_internal_ptr, 0, sizeof(led_internal_t));
     memset(led_ptr, 0, sizeof(led_t));
 
-    led_ptr->led_internal = led_internal_ptr;
-    led_ptr->switch_on = switch_on;
-    led_ptr->switch_off = switch_off;
+    led_ptr->led_internal   = led_internal_ptr;
+    led_ptr->switch_on      = switch_on;
+    led_ptr->switch_off     = switch_off;
+    led_ptr->args      = args;
 
     return led_ptr;
 }
@@ -215,12 +214,12 @@ static void led_switch(led_t *led_handle)
 
     if (led_internal_ptr->mode_pointer % 2)
     {
-        led_handle->switch_off();
+        led_handle->switch_off(led_handle->args);
         led_internal_ptr->state = LED_OFF;
     }
     else
     {
-        led_handle->switch_on();
+        led_handle->switch_on(led_handle->args);
         led_internal_ptr->state = LED_ON;
     }
 }
@@ -239,12 +238,12 @@ void led_toggle(led_t *led_handle)
 
     if (led_internal_ptr->state == LED_OFF)
     {
-        led_handle->switch_on();
+        led_handle->switch_on(led_handle->args);
         led_internal_ptr->state = LED_ON;
     }
     else
     {
-        led_handle->switch_off();
+        led_handle->switch_off(led_handle->args);
         led_internal_ptr->state = LED_OFF;
     }
 }
@@ -342,7 +341,7 @@ void led_stop(led_t *led_handle)
     led_t **handle_pointer = NULL;
     led_t *handle_destory = NULL;
 
-    led_handle->switch_off(); //关闭灯
+    led_handle->switch_off(led_handle->args); //关闭灯
 
     for (handle_pointer = &first_handle; *handle_pointer;)
     {
