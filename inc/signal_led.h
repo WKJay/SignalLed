@@ -1,8 +1,8 @@
 #ifndef __SIGNAL_LED_H__
 #define __SIGNAL_LED_H__
 
-#include <rtconfig.h>
-#include <rtdef.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus 
 extern "C" { 

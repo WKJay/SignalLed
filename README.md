@@ -1,4 +1,4 @@
-# 信号灯LED V2.1
+# 信号灯LED
 
 # 1、介绍
 
@@ -42,12 +42,12 @@ led_t *led0 =  NULL;
 
 ```C
 //定义开灯函数
-void led0_switch_on(void)
+void led0_switch_on(void *param)
 {
     rt_pin_write(LED0_PIN, PIN_LOW);
 }
 //定义关灯函数
-void led0_switch_off(void)
+void led0_switch_off(void *param)
 {
     rt_pin_write(LED0_PIN, PIN_HIGH);
 }
@@ -64,7 +64,7 @@ char *led0BlinkMode = "200,200,200,200,200,1000,";
 5. 动态创建一个信号灯对象，并给对应的句柄赋值
 
 ```C
-led0 = led_create(led0_switch_on, led0_switch_off);
+led0 = led_create(led0_switch_on, led0_switch_off, NULL);
 ```
 
 6. 设置信号灯工作模式（循环10次，闪烁方式为 `led0BlinkMode` 中的设定）
@@ -103,20 +103,21 @@ while (1)
 
 ###	创建信号灯对象
 ```C
-led_t *led_create(void (*switch_on)(void), void (*switch_off)(void))
+led_t *led_create(void (*switch_on)(void *param), void (*switch_off)(void *param), void *args)
 ```
 
 |参数|描述|
 |----|----|
 |switch_on|开灯函数（用户自定义）|
 |switch_off|关灯函数（用户自定义）|
+|args|用户自定义参数，该参数会在调用开关灯函数时被作为参数传入|
 
 该函数用于动态创建一个信号灯对象，若创建成功则返回一个信号灯对象句柄，若失败则返回NULL。
 
 开关灯函数由用户自定义，格式参照如下：
 
 ```C
-void switch_on (void) //待传入的函数
+void switch_on (void *param) //待传入的函数
 {
     rt_pin_write(LED0_PIN, PIN_LOW);//实现具体操作的函数
 }
@@ -281,6 +282,7 @@ typedef struct led_mem_operation
 
 #include <rtthread.h>
 #include <rtdevice.h>
+#include <drv_gpio.h>
 #include "signal_led.h"
 
 /* defined the LED pin */
@@ -303,14 +305,14 @@ char *led_blink_mode_3 = "100,0,";   //常亮
 char *led_blink_mode_4 = "100,100,100,1000,";//非固定时间
 char *led_blink_mode_5 = "500,100,";
 //定义开灯函数
-void led0_switch_on(void)
+void led0_switch_on(void *param)
 {
     rt_pin_write(LED0_PIN, PIN_HIGH);
 }
 
 
 //定义关灯函数
-void led0_switch_off(void)
+void led0_switch_off(void *param)
 {
     rt_pin_write(LED0_PIN, PIN_LOW);
 }
@@ -342,7 +344,7 @@ static void led_run(void *parameter)
 
 int rt_led_timer_init(void)
 {
-    rt_pin_mode(GET_PIN(A,8),PIN_MODE_OUTPUT);
+    rt_pin_mode(LED0_PIN,PIN_MODE_OUTPUT);
     
 /*自定义内存操作接口
  *注意：若要进行自定义内存操作，必须要在调用任何软件包内接口之前作设置，
@@ -353,8 +355,8 @@ int rt_led_timer_init(void)
     led_set_mem_operation(&led_mem_opreation);
     
     //初始化信号灯对象
-    led0 = led_create(led0_switch_on, led0_switch_off);
-  
+    led0 = led_create(led0_switch_on, led0_switch_off, NULL);
+
     //设置信号灯工作模式，循环十次
     led_set_mode(led0, LOOP_PERMANENT, led_blink_mode_0);
     //设置信号灯闪烁结束回调函数

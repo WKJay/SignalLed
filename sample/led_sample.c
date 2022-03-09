@@ -1,9 +1,10 @@
 #include <rtthread.h>
 #include <rtdevice.h>
+#include <board.h>
 #include "signal_led.h"
 
 /* defined the LED pin */
-#define LED0_PIN    GET_PIN(A, 8)
+#define LED0_PIN    GET_PIN(C, 1)
 
 //定义信号灯对象句柄
 led_t *led0 =  NULL;
@@ -22,14 +23,14 @@ char *led_blink_mode_3 = "100,0,";   //常亮
 char *led_blink_mode_4 = "100,100,100,1000,";//非固定时间
 char *led_blink_mode_5 = "500,100,";
 //定义开灯函数
-void led0_switch_on(void)
+void led0_switch_on(void *param)
 {
     rt_pin_write(LED0_PIN, PIN_HIGH);
 }
 
 
 //定义关灯函数
-void led0_switch_off(void)
+void led0_switch_off(void *param)
 {
     rt_pin_write(LED0_PIN, PIN_LOW);
 }
@@ -61,7 +62,7 @@ static void led_run(void *parameter)
 
 int rt_led_timer_init(void)
 {
-    rt_pin_mode(GET_PIN(A,8),PIN_MODE_OUTPUT);
+    rt_pin_mode(LED0_PIN,PIN_MODE_OUTPUT);
     
 /*自定义内存操作接口
  *注意：若要进行自定义内存操作，必须要在调用任何软件包内接口之前作设置，
@@ -72,8 +73,8 @@ int rt_led_timer_init(void)
     led_set_mem_operation(&led_mem_opreation);
     
     //初始化信号灯对象
-    led0 = led_create(led0_switch_on, led0_switch_off);
-  
+    led0 = led_create(led0_switch_on, led0_switch_off, NULL);
+
     //设置信号灯工作模式，循环十次
     led_set_mode(led0, LOOP_PERMANENT, led_blink_mode_0);
     //设置信号灯闪烁结束回调函数
